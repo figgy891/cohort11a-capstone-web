@@ -18,6 +18,9 @@ function Dashboard() {
     const [answerTxt, setAnswerTxt] = useState('');
     const [answers, setAnswers] = useState();
 
+    const [token, setToken] = useState();
+    const [userId, setUserId] = useState();
+
     let apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
 
@@ -29,11 +32,40 @@ function Dashboard() {
         //   console.log(process.env.API_URL)
         // console.log(process.env.REACT_APP_API_URL)
         console.log(`${apiUrl}/api/v1/categories`)
-        let res = await fetch(`${apiUrl}/api/v1/categories`);
+        let res = await fetch(`${apiUrl}/api/v1/categories?token=${localStorage.getItem('token')}`);
         let data = await res.json();
         console.log(data);
         setCategories(data);
     };
+
+    const fetchUserId = async () => {
+        let userRes = await fetch(`${apiUrl}/api/v1/users/me?token=${localStorage.getItem('token')}`);
+        let u = await userRes.json()
+        console.log('the current user is', u);
+        setUserId(u.userId);
+    };
+
+    const isLoggedIn = () => {
+        if(localStorage.getItem('token')){
+            setToken(localStorage.getItem('token'));
+
+            fetchUserId()
+
+            return true;
+        } else {
+            return false;
+        }
+
+    };
+
+    useEffect(() => {
+        // this code will run only once on component mount
+        if(isLoggedIn()){
+            fetchCategories()
+        } else {
+            window.location.href = '/'
+        }
+    }, [])
 
     useEffect(() => {
         // this code will run only once on component mount
@@ -59,9 +91,10 @@ function Dashboard() {
 
     const fetchQuestionsForCategory = async (id) => {
         console.log('fetch questions for this category id', id);
-        let res = await fetch(`${apiUrl}/api/v1/categories/${id}/questions`);
+        let res = await fetch(`${apiUrl}/api/v1/categories/${id}/questions?token=${token}&userId=${userId}`);
         let data = await res.json();
         console.log(data);
+        data = data.reverse()
         setQuestions(data);
         // setCategories(data);
 
@@ -69,7 +102,7 @@ function Dashboard() {
 
     const fetchAnswersForQuestion = async (id) => {
         console.log('fetch answers for this question id', id);
-        let res = await fetch(`${apiUrl}/api/v1/categories/:categoryId/questions/${id}/answers`);
+        let res = await fetch(`${apiUrl}/api/v1/categories/:categoryId/questions/${id}/answers?token=${token}`);
         let data = await res.json();
         console.log(data);
         setAnswers(data);
@@ -79,13 +112,13 @@ function Dashboard() {
 
     const createNewQuestion = async () => {
         console.log('create a question for the category id', selectedCategory)
-        let res = await fetch(`${apiUrl}/api/v1/categories/${selectedCategory}/questions`, {
+        let res = await fetch(`${apiUrl}/api/v1/categories/${selectedCategory}/questions?token=${token}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
                 // 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: JSON.stringify({ questionTxt: questionTxt })
+            body: JSON.stringify({ questionTxt: questionTxt, userId: userId })
         });
         fetchQuestionsForCategory(selectedCategory);
         setQuestionTxt('')
@@ -100,7 +133,7 @@ function Dashboard() {
 
     const createANewAnswer = async () => {
         console.log('create an answer for the question id', selectedQuestion)
-        let res = await fetch(`${apiUrl}/api/v1/categories/:categoryId/questions/${selectedQuestion}/answers`, {
+        let res = await fetch(`${apiUrl}/api/v1/categories/:categoryId/questions/${selectedQuestion}/answers?token=${token}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -131,12 +164,18 @@ function Dashboard() {
       }
     };
 
+    const logout = async () => {
+        localStorage.removeItem('token');
+        window.location.href = '/';
+
+    };
+
 
     return (
         <>
             <div className="grid grid-cols-12">
                 <div className={'col-span-full border p-5'}>
-                    <h1 className={'text-center text-3xl'}>Questions App</h1>
+                    <h1 className={'text-center text-3xl'}>Questions App &nbsp;&nbsp;<Button onClick={logout}>Log out</Button></h1>
                 </div>
 
             </div>
